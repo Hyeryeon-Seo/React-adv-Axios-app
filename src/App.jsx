@@ -1,10 +1,11 @@
-import axios from "axios";
+// import axios from "axios";
+import api from "./axios/api"; // 임포트하고 axios썼던부분 api로 바꾸기
 import { useEffect, useState } from "react";
 import "./App.css";
 // * 터미널 두개 따로 열고, 하나는 json server, 하나는 yarn start(dev등) !
 function App() {
 	const [todos, setTodos] = useState(null);
-	const [inputValue, setInputValue] = useState({
+	const [todo, setTodo] = useState({
 		title: "",
 	}); // json형식으로 저장할거라서
 	// db.json이나 noSQL방식 ..  몽고DB나 이 json-server와 같은 json 데이터베이스방식은, id가 자동입력됨 -  title만 (json 객체형식으로)넣어주면 됨
@@ -12,12 +13,16 @@ function App() {
 	const [contents, setContents] = useState("");
 
 	// GET 조회 함수
-	// 비동기 함수 만들기 asnyc/await로- db 서버 통신한다는 자체가, 비동기를 의미
+	// 비동기 함수(:json-server에 todos를 요청하는 함수) 만들기 asnyc/await로- db 서버 통신한다는 자체가, 비동기를 의미
 	// 비동기 통신, 제어권이 나한테 없는. 서버의 상태를 기다려야해서.
+
+	// 새로고침, 화면 렌더링되면서 fetchTodos실행됨 => axios call하며 요청
 	const fetchTodos = async () => {
 		// * async 블럭 안에서, awiat 를 만나면 (아래) 해당 줄이 끝날때까지 기다림
 		// const response = await axios.get("http://localhost:4001/todos");
-		const { data } = await axios.get("http://localhost:4001/todos"); //구조분해할당
+		const { data } = await api.get(
+			"/todos" // api임포트로 바꾼 후, baseURL써준부분 안써도됨
+		); //구조분해할당
 		// 받아온 거 (response라고하면)의 key값 data 이름으로..  그 안의 value(배열)를 받아오기?
 		// 그냥 콘솔로 찍으면, Promise <pending> 으로 뜸-응답받기전에 console찍어서 그럼
 		// 그래서 응답받을때까지 기다려줘야하니까 위에 await 적기
@@ -28,12 +33,14 @@ function App() {
 
 	// POST 추가 함수
 	// (form태그) 추가 버튼 핸들링
-	const onSubmitHandler = async () => {
-		axios.post("http://localhost:4001/todos", inputValue);
+	const onSubmitHandler = async (todo) => {
+		await api.post("/todos", todo); // await를 써줘야 바로렌더링되면서 추가되는듯
+		// await안쓰면 새로고침하면 추가된게 확인되지만 바로 안뜰 때가 있다
 		// 새로고침없이 버튼 누르면 바로 렌더링되었으면 함 => state도 같이 렌더링 시켜줘야. state값이 안변해서 안되는것 (화면도, 컴포넌트도 같이 렌더링시켜주기) -> toods도 변경
 		// 컴포넌트가 렌더링되는 조건: state변경, props변경, 부모컴포넌트 변경
 
 		// setTodos([...todos, inputValue]);
+		// inputValue 가 todo로 변경되어서..
 
 		// => DB에는 자동으로 id입력되지만, state는 이를 알 수 없어 => (추가 시) id가 자동으로 갱신되지 않는 문제
 		// - 이 때는 그냥 조회get을 위해 만든fetch..함수로 다시 db 읽어오는게 적합 => id도 바로 갱신되게
@@ -44,7 +51,7 @@ function App() {
 	// DELETE 삭제 함수
 	// axios 통해서 DB에 있는 아이템 삭제돼야
 	const onDeleteButtonClickHandler = async (id) => {
-		axios.delete(`http://localhost:4001/todos/${id}`);
+		api.delete(`/todos/${id}`);
 		setTodos(
 			todos.filter((item) => {
 				return item.id !== id;
@@ -55,7 +62,7 @@ function App() {
 	// UPDATE - (PATCH) 수정 함수
 	const onUpateButtonClickHandler = async () => {
 		// 인자로 id, contents 2개 받아야(id와 수정할내용)하지만, state로 갖고있으니 그걸로 하면됨
-		axios.patch(`http://localhost:4001/todos/${targetId}`, {
+		api.patch(`/todos/${targetId}`, {
 			title: contents, // 여기는 {...item 스프레드연산자 쓸 필요없나보다..!?/ map안돌려서 item이라고 쓸 것도 없기도하고
 		});
 
@@ -120,14 +127,14 @@ function App() {
 							/* 버튼 클릭 시, input에 들어있는 값(state)을 이용해 DB에 저장(post 요청) */
 						}
 						e.preventDefault();
-						onSubmitHandler();
+						onSubmitHandler(todo);
 					}}
 				>
 					<input
 						type="text"
-						value={inputValue.title}
+						value={todo.title}
 						onChange={(e) => {
-							setInputValue({ title: e.target.value }); // 객체형태로 똑같이 넣어줘야
+							setTodo({ title: e.target.value }); // 객체형태로 똑같이 넣어줘야
 						}}
 					/>
 					{/*onChange는 고유속성이 항상 이벤트받아 */}
